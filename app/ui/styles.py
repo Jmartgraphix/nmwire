@@ -19,6 +19,10 @@ class StyleManager:
         font-size: 14px;
     }
 
+    #ethernet-port-title:hover #ethernet-name-label {
+        color: #4a90d9;
+    }
+
     #wifi-scan-label, #ethernet-scan-label {
         font-size: 14px;
     }

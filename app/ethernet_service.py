@@ -90,6 +90,77 @@ def _dns_servers(eth_dev: DeviceDetails) -> str:
     return ", ".join(servers) if servers else "unavailable"
 
 
+def _lowest_metric(routes: list[tuple[int, str]]) -> str:
+    if not routes:
+        return ""
+    routes.sort()
+    return routes[0][1]
+
+
+def ipv4_default_device(lines: list[str]) -> str:
+    """Interface with the lowest-metric IPv4 default route."""
+    found: list[tuple[int, str]] = []
+    for line in lines:
+        fields = line.split()
+        if len(fields) < 7:
+            continue
+        iface, destination, _gateway, flags, _ref, _use, metric = fields[:7]
+        if destination != "00000000" or not iface:
+            continue
+        try:
+            flag_value = int(flags, 16)
+            metric_value = int(metric)
+        except ValueError:
+            continue
+        # RTF_UP. Skip the header and any route that is not usable.
+        if flag_value & 0x1 == 0:
+            continue
+        found.append((metric_value, iface))
+    return _lowest_metric(found)
+
+
+def ipv6_default_device(lines: list[str]) -> str:
+    """Interface with the lowest-metric IPv6 default route."""
+    found: list[tuple[int, str]] = []
+    for line in lines:
+        fields = line.split()
+        if len(fields) < 10:
+            continue
+        destination, prefix, _src, _src_prefix, _gateway, metric, _ref, _use, flags, iface = fields[:10]
+        if destination != "00000000000000000000000000000000" or prefix != "00" or not iface:
+            continue
+        try:
+            flag_value = int(flags, 16)
+            metric_value = int(metric, 16)
+        except ValueError:
+            continue
+        # Ignore down routes and the kernel's unreachable default on lo.
+        if flag_value & 0x1 == 0 or flag_value & 0x200:
+            continue
+        found.append((metric_value, iface))
+    return _lowest_metric(found)
+
+
+def default_route_device() -> str:
+    """Interface that currently owns the default route.
+
+    Several wired links can be connected at once. The one with the lowest
+    route metric is the link actually carrying traffic.
+    """
+    try:
+        ipv4 = open("/proc/net/route").read().splitlines()
+    except OSError:
+        ipv4 = []
+    device = ipv4_default_device(ipv4)
+    if device:
+        return device
+    try:
+        ipv6 = open("/proc/net/ipv6_route").read().splitlines()
+    except OSError:
+        ipv6 = []
+    return ipv6_default_device(ipv6)
+
+
 class EthernetDetails:
     device: str
     hwaddr: str
