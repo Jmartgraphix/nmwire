@@ -17,7 +17,7 @@ class NetworkManagerWindow(Gtk.ApplicationWindow):
     
     def __init__(self, app):
         super().__init__(application=app)
-        self.set_title("Network Manager")
+        self.set_title("nmwire")
         self.set_default_size(520, 680)
         
         self.current_state = WiFiState.OFF

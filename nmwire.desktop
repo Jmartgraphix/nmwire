@@ -1,9 +1,10 @@
 [Desktop Entry]
-Name=NM GUI
-Comment=GTK4-based Network Manager GUI using nmcli
-Exec=nmgui
+Name=nmwire
+Comment=GTK4 NetworkManager panel for Wi-Fi and Ethernet
+Exec=nmwire
 Icon=network-wireless-symbolic
 Terminal=false
 Type=Application
 Categories=Network;GTK;
 StartupNotify=true
+StartupWMClass=com.jmartgraphix.nmwire

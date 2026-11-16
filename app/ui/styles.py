@@ -2,6 +2,21 @@
 
 import os
 import gi
+
+
+def user_style_path(home_path):
+    """Path to a user style sheet, if one exists.
+
+    ``~/.config/nmwire/style.css`` wins. The old ``nmgui`` folder is
+    still read when the new file is absent.
+    """
+    for folder in ("nmwire", "nmgui"):
+        path = os.path.join(home_path, ".config", folder, "style.css")
+        if os.path.isfile(path):
+            return path
+    return None
+
+
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Gdk
 
@@ -103,10 +118,9 @@ class StyleManager:
         """Apply CSS styles to the application"""
         css_provider = Gtk.CssProvider()
 
-        home_path = os.path.expanduser("~")
-
-        if os.path.exists(f"{home_path}/.config/nmgui/style.css"):
-            css_provider.load_from_path(f"{home_path}/.config/nmgui/style.css")
+        style_path = user_style_path(os.path.expanduser("~"))
+        if style_path:
+            css_provider.load_from_path(style_path)
         else:
             css_provider.load_from_data(cls.CSS_STYLES)
         
