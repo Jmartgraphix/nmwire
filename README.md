@@ -1,4 +1,4 @@
-<h1 align="center">NM GUI</h1>
+<h1 align="center">NM WIRE</h1>
 
 A simple, lightweight GTK4-based GUI for NetworkManager using `nmcli`.
 
