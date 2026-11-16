@@ -1,11 +1,13 @@
 import time
 import threading
+from dataclasses import replace
 import gi
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib, Pango
 from typing import List, Callable
 
-from network_service import NetworkService, NetworkInfo
+from models import NetworkGroup, NetworkInfo, group_networks
+from network_service import NetworkService
 
 class NetworkListWidget(Gtk.Box):
     """Widget for displaying network list with visual rescan feedback"""
@@ -16,7 +18,7 @@ class NetworkListWidget(Gtk.Box):
         self.on_network_details = on_network_details
         self.is_scanning = False
         self.scan_start_time = None
-        
+
         self._create_header()
         self._create_network_list()
     
@@ -40,15 +42,10 @@ class NetworkListWidget(Gtk.Box):
         self.append(header_box)
     
     def _create_network_list(self):
-        """Create the scrollable network list"""
-        self.network_list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5, vexpand=True)
+        """Create the network list. The window scrolls this with the rest of the page."""
+        self.network_list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         self.network_list_box.set_name("network-list-box")
-        
-        scrolled_window = Gtk.ScrolledWindow(vexpand=True)
-        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scrolled_window.set_child(self.network_list_box)
-        
-        self.append(scrolled_window)
+        self.append(self.network_list_box)
     
     def _create_click_controller(self, callback: Callable):
         """Create a click controller for a label"""
@@ -112,33 +109,28 @@ class NetworkListWidget(Gtk.Box):
             no_networks_label.set_name("no-networks-label")
             self.network_list_box.append(no_networks_label)
         else:
-            sorted_networks = sorted(networks, key=lambda n: (not n.is_connected, -n.signal))
-            
-            for network in sorted_networks:
-                network_row = self._create_network_row(network)
-                self.network_list_box.append(network_row)
+            for group in group_networks(networks):
+                self.network_list_box.append(self._create_group_row(group))
         
         return False
-    
-    def _create_network_row(self, network: NetworkInfo) -> Gtk.Box:
-        """Create a row for a network with connect button and more button"""
-        row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
-        
-        # Main network button
-        network_button = self._create_network_button(network)
+
+    def _create_group_row(self, group: NetworkGroup) -> Gtk.Box:
+        """One row per SSID. Connected rows show the link in use."""
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        shown = replace(group.display_node, is_connected=group.is_connected)
+        network_button = self._create_network_button(shown)
         network_button.set_hexpand(True)
-        
-        # More button
+        row.append(network_button)
+        row.append(self._create_details_button(group.display_node))
+        return row
+
+    def _create_details_button(self, network: NetworkInfo) -> Gtk.Button:
         more_button = Gtk.Button()
         more_button.set_icon_name("go-next-symbolic")
         more_button.set_tooltip_text("More Details")
         more_button.set_css_classes(["more-details-button"])
-        more_button.connect("clicked", lambda b, n=network: self.on_network_details(n))
-     
-        row_box.append(network_button)
-        row_box.append(more_button)
-        
-        return row_box
+        more_button.connect("clicked", lambda _button, chosen=network: self.on_network_details(chosen))
+        return more_button
     
     def _create_network_button(self, network: NetworkInfo) -> Gtk.Button:
         """Create a button for a network"""
@@ -152,8 +144,15 @@ class NetworkListWidget(Gtk.Box):
 
         # Network name
         network_label = Gtk.Label(label=network.ssid, xalign=0, hexpand=True)
+        network_label.set_ellipsize(Pango.EllipsizeMode.END)
+        network_label.set_name("network-ssid")
         network_box.append(network_label)
-        
+
+        strength = Gtk.Label(label=f"{network.signal}%")
+        strength.add_css_class("dim-label")
+        strength.set_name("network-signal")
+        network_box.append(strength)
+
         # Connected indicator
         if network.is_connected:
             check_icon = Gtk.Image.new_from_icon_name("object-select-symbolic")

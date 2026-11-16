@@ -229,8 +229,12 @@ class EthernetService:
 
     @staticmethod
     def is_ethernet_available(details: EthernetDetails) -> bool:
-        """True when this device can be toggled. Different from connected."""
-        return bool(details.device) and details.state != "unavailable"
+        """True when this device can be toggled.
+
+        An unplugged port has no carrier, so the switch stays off until a
+        cable is present. A disconnected port with a cable still toggles.
+        """
+        return bool(details.device) and details.state not in ("unavailable", "unplugged")
 
     @staticmethod
     def toggle_ethernet(state: bool, device: str) -> bool:

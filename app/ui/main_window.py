@@ -18,7 +18,7 @@ class NetworkManagerWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app)
         self.set_title("Network Manager")
-        self.set_default_size(450, 350)
+        self.set_default_size(520, 680)
         
         self.current_state = WiFiState.OFF
         self.current_view = "list"  # "list" or "details"
@@ -49,8 +49,11 @@ class NetworkManagerWindow(Gtk.ApplicationWindow):
         
         self.content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, vexpand=True)
         main_box.append(self.content_box)
-        
-        self.set_child(main_box)
+
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_child(main_box)
+        self.set_child(scrolled)
     
     def _create_wifi_toggle(self) -> Gtk.Box:
         """Create the WiFi toggle section"""
