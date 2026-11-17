@@ -242,15 +242,28 @@ class EthernetDetails:
         self.state = link_state(eth_dev)
 
 
+_VIRTUAL_PREFIXES = ("docker", "veth", "virbr", "br-", "tun", "tap", "dummy", "vnet")
+
+
+def _listed_port(dev: DeviceDetails) -> bool:
+    """A physical wired port that NetworkManager is allowed to control.
+
+    State 10 is unmanaged, so it is not a port the user can change here.
+    Docker bridges and other virtual interfaces are not physical ports.
+    """
+    if dev.get("GENERAL.TYPE") != "ethernet":
+        return False
+    name = dev.get("GENERAL.DEVICE") or ""
+    if not name or name.startswith(_VIRTUAL_PREFIXES):
+        return False
+    return _leading_code(dev.get("GENERAL.STATE")) != 10
+
+
 class EthernetService:
     @staticmethod
     def get_devices() -> list[DeviceDetails]:
-        """Return every wired device, not only the first one."""
-        return [
-            dev
-            for dev in _device.show_all()
-            if dev.get("GENERAL.TYPE") == "ethernet"
-        ]
+        """Return every physical wired port NetworkManager manages."""
+        return [dev for dev in _device.show_all() if _listed_port(dev)]
 
     @staticmethod
     def get_device_details(device: str) -> DeviceDetails | None:
