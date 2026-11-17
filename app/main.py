@@ -52,6 +52,3 @@ if __name__ == "__main__":
         app.run()
     except KeyboardInterrupt:
         print("Application stopped manually.")
-    except SystemExit:
-        # argparse calls sys.exit() for version/help, let it pass through
-        pass
