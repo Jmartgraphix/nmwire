@@ -4,11 +4,17 @@ import subprocess
 import shutil
 from typing import List, Tuple, Optional
 
+from nmcli._radio import RadioControl
+
 # Import the new NetworkInfo model from models
 from models import NetworkInfo
+from ethernet_service import _EnglishCommand
 
 nmcli.disable_use_sudo()
 nmcli.set_lang(os.environ.get("LANG") or "C.UTF-8")
+# Radio answers are compared with the English word "enabled". LANGUAGE
+# overrides LANG, so this uses the same pinned command as Ethernet.
+nmcli.radio = RadioControl(_EnglishCommand())
 
 class NmcliExtensions:
     """Extended functionalities for nmcli package"""
