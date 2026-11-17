@@ -62,6 +62,8 @@ The window title is `nmwire` and the application id is `com.jmartgraphix.nmwire`
 windowrulev2 = float, class:^(com\.jmartgraphix\.nmwire)$
 ```
 
+A Lua config uses `hl.window_rule({ match = { class = "com\\.jmartgraphix\\.nmwire" }, float = true })`.
+
 ## Credits
 
 - [Aditya Pratap Singh](https://github.com/s-adi-dev) — original nmgui

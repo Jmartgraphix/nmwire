@@ -16,7 +16,7 @@ except (ValueError, ImportError):
 from ui.styles import StyleManager
 
 # Application version
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 class NmwireApp(Gtk.Application):
     """Main application class"""
@@ -68,6 +68,6 @@ if __name__ == "__main__":
         app = NmwireApp()
         # SIGTERM skips Python's interrupt handler, so quit through GLib.
         _signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, lambda: app.quit() or GLib.SOURCE_REMOVE)
-        app.run()
+        sys.exit(app.run(sys.argv))
     except KeyboardInterrupt:
         print("Application stopped manually.")

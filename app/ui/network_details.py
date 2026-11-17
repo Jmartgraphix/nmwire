@@ -362,7 +362,7 @@ class NetworkDetailsWidget(Gtk.Box):
         def load_info_thread():
             try:
                 wifi_details = None
-                for wifi in nmcli.device.wifi():
+                for wifi in nmcli.device.wifi(rescan=False):
                     if wifi.ssid == self.network.ssid:
                         wifi_details = wifi
                         break

@@ -57,10 +57,10 @@ class NetworkListWidget(Gtk.Box):
     def _on_refresh_clicked(self):
         """Handle refresh button click with visual feedback"""
         if not self.is_scanning:
-            self.start_scan()
+            self.start_scan(rescan=True)
     
-    def start_scan(self):
-        """Start network scanning with visual feedback"""
+    def start_scan(self, rescan: bool = False):
+        """List networks. Only an explicit refresh asks NetworkManager to scan."""
         if self.is_scanning:
             return
         
@@ -76,23 +76,25 @@ class NetworkListWidget(Gtk.Box):
         self._clear_network_list()
         
         # Show scanning message
-        scanning_label = Gtk.Label(label="Scanning for networks...")
+        scanning_label = Gtk.Label(
+            label="Scanning for networks..." if rescan else "Loading networks..."
+        )
         scanning_label.set_margin_top(64)
         scanning_label.set_name("scanning-label")
         self.network_list_box.append(scanning_label)
         
         # Start background scan
-        thread = threading.Thread(target=self._background_scan)
+        thread = threading.Thread(target=self._background_scan, args=(rescan,))
         thread.daemon = True
         thread.start()
     
-    def _background_scan(self):
+    def _background_scan(self, rescan: bool):
         """Background network scanning"""
         try:
-            networks = NetworkService.scan_networks(force_rescan=True)
+            networks, scan_allowed = NetworkService.scan_networks(rescan=rescan)
             scan_duration = time.time() - self.scan_start_time if self.scan_start_time else 0
             
-            GLib.idle_add(self._update_network_list, networks, scan_duration)
+            GLib.idle_add(self._update_network_list, networks, scan_duration, scan_allowed)
             
         except Exception as e:
             print(f"Error during background scan: {e}")
@@ -100,7 +102,7 @@ class NetworkListWidget(Gtk.Box):
         finally:
             GLib.idle_add(self._scan_complete)
     
-    def _update_network_list(self, networks: List[NetworkInfo], scan_duration: float):
+    def _update_network_list(self, networks: List[NetworkInfo], scan_duration: float, scan_allowed: bool = True):
         """Update the network list UI with scan results"""
         self._clear_network_list()
         
@@ -111,6 +113,11 @@ class NetworkListWidget(Gtk.Box):
         else:
             for group in group_networks(networks):
                 self.network_list_box.append(self._create_group_row(group))
+        if not scan_allowed:
+            note = Gtk.Label(label="Showing recent networks (scan not permitted)", xalign=0.5)
+            note.add_css_class("dim-label")
+            note.set_name("scanning-label")
+            self.network_list_box.append(note)
         
         return False
 

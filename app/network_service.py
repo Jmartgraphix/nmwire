@@ -34,6 +34,10 @@ class NmcliExtensions:
             pass
         nmcli.device._syscmd.nmcli(["device", "wifi", "connect", ssid])
 
+class ScanFailed(Exception):
+    """A network list could not be read at all."""
+
+
 class NetworkService:
     """Service class to handle network operations"""
     
@@ -64,33 +68,44 @@ class NetworkService:
             return False
     
     @staticmethod
-    def scan_networks(force_rescan: bool = True) -> List[NetworkInfo]:
-        """Scan for available networks with optional force rescan"""
+    def _visible_networks(rescan: bool) -> List[NetworkInfo]:
         networks = []
-        try:
-            visible = (
-                nmcli.device.wifi(rescan=True) if force_rescan else nmcli.device.wifi()
-            )
-            for wifi in visible:
-                if not wifi.ssid:
-                    continue
-                networks.append(NetworkInfo.from_wifi_device(wifi))
-            
-        except Exception as e:
-            print(f"Error scanning networks: {e}")
-        
+        for wifi in nmcli.device.wifi(rescan=rescan):
+            if not wifi.ssid:
+                continue
+            networks.append(NetworkInfo.from_wifi_device(wifi))
         return networks
+
+    @staticmethod
+    def scan_networks(rescan: bool = False) -> Tuple[List[NetworkInfo], bool]:
+        """List known networks. A forced scan is only for an explicit refresh.
+
+        Returns the network list and whether the requested scan was allowed.
+        A refused forced scan falls back to the cached list. A list that cannot
+        be read at all raises ScanFailed.
+        """
+        try:
+            return NetworkService._visible_networks(rescan), True
+        except Exception as exc:
+            if rescan:
+                try:
+                    return NetworkService._visible_networks(False), False
+                except Exception as retry_exc:
+                    print(f"Error scanning networks: {retry_exc}")
+                    raise ScanFailed("Could not read Wi-Fi networks") from retry_exc
+            print(f"Error scanning networks: {exc}")
+            raise ScanFailed("Could not read Wi-Fi networks") from exc
 
     @staticmethod
     def is_wifi_known(ssid: str) -> bool:
         """Check if WiFi network is already known/saved"""
         try:
             connections = nmcli.connection()
-            return any(
-                nmcli.connection.show(conn.uuid).get("802-11-wireless.ssid") != None
-                and nmcli.connection.show(conn.uuid).get("802-11-wireless.ssid") == ssid
-                for conn in connections
-            )
+            for conn in connections:
+                shown = nmcli.connection.show(conn.uuid).get("802-11-wireless.ssid")
+                if shown == ssid:
+                    return True
+            return False
         except Exception as e:
             print(f"Error checking known networks: {e}")
             return False
@@ -163,7 +178,7 @@ class NetworkService:
     def get_wifi_details(ssid: str):
         """Get detailed information about a specific wifi network"""
         try:
-            for wifi in nmcli.device.wifi():
+            for wifi in nmcli.device.wifi(rescan=False):
                 if wifi.ssid == ssid:
                     return NetworkInfo.from_wifi_device(wifi)
             return None
