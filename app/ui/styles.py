@@ -34,16 +34,18 @@ class StyleManager:
         font-size: 14px;
     }
 
+    /* Follow the desktop selection colour instead of a fixed blue. */
     #ethernet-port-title:hover #ethernet-name-label {
-        color: #4a90d9;
+        color: @theme_selected_bg_color;
     }
 
     #wifi-scan-label, #ethernet-scan-label {
         font-size: 14px;
     }
 
-    #wifi-scan-label:hover {
-        color: #4a90d9;
+    #wifi-scan-label:hover,
+    #ethernet-scan-label:hover {
+        color: @theme_selected_bg_color;
     }
     
     #scanning-label {
@@ -68,7 +70,7 @@ class StyleManager:
     }
 
     .connected-network {
-        background-color: rgba(74, 144, 217, 0.1);
+        background-color: alpha(@theme_selected_bg_color, 0.12);
     }
     
     #wifi-off-box {
@@ -81,7 +83,7 @@ class StyleManager:
     }
     
     .rescan-in-progress {
-        color: #4a90d9;
+        color: @theme_selected_bg_color;
         animation: pulse 1.5s infinite;
     }
     

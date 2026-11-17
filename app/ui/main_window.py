@@ -12,7 +12,7 @@ from ui.network_details import NetworkDetailsWidget
 from ui.wifi_off import WiFiOffWidget
 from ui.dialogs import PasswordDialog
 
-class NetworkManagerWindow(Gtk.ApplicationWindow):
+class NmwireWindow(Gtk.ApplicationWindow):
     """Main application window"""
     
     def __init__(self, app):
@@ -41,9 +41,6 @@ class NetworkManagerWindow(Gtk.ApplicationWindow):
         self.ethernet_section = EthernetSection()
         main_box.append(self.ethernet_section)
         main_box.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
-
-        main_box.append(Gtk.Box(hexpand=True))  # spacer
-
         main_box.append(self._create_wifi_toggle())
         main_box.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         

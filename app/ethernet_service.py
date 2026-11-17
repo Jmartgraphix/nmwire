@@ -120,6 +120,27 @@ def _indexed_values(eth_dev: DeviceDetails, prefix: str) -> list[str]:
     return [value for _, value in found]
 
 
+def _is_link_local_ipv6(address: str) -> bool:
+    """True for fe80::/10. Those addresses only work on the local link."""
+    host = address.split("/", 1)[0].split("%", 1)[0].strip().lower()
+    first = host.split(":", 1)[0]
+    try:
+        return 0xFE80 <= int(first, 16) <= 0xFEBF
+    except ValueError:
+        return False
+
+
+def _display_address(eth_dev: DeviceDetails) -> str:
+    """IPv4 when the port has one, otherwise a global IPv6 address."""
+    for raw in _indexed_values(eth_dev, "IP4.ADDRESS"):
+        if raw.strip():
+            return raw
+    for raw in _indexed_values(eth_dev, "IP6.ADDRESS"):
+        if raw.strip() and not _is_link_local_ipv6(raw):
+            return raw
+    return "unavailable"
+
+
 def _dns_servers(eth_dev: DeviceDetails) -> str:
     servers = _indexed_values(eth_dev, "IP4.DNS")
     servers.extend(
@@ -229,11 +250,7 @@ class EthernetDetails:
         self.device = eth_dev.get("GENERAL.DEVICE") or ""
         self.hwaddr = eth_dev.get("GENERAL.HWADDR")
         self.name = eth_dev.get("GENERAL.CONNECTION")
-        self.ipaddr = (
-            eth_dev.get("IP4.ADDRESS[1]")
-            or eth_dev.get("IP6.ADDRESS[1]")
-            or "unavailable"
-        )
+        self.ipaddr = _display_address(eth_dev)
         self.gateway_addr = (
             eth_dev.get("IP4.GATEWAY") or eth_dev.get("IP6.GATEWAY") or "unavailable"
         )

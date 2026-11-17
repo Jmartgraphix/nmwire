@@ -1,6 +1,4 @@
 import os
-import re
-import time
 import nmcli
 import subprocess
 import shutil
@@ -16,47 +14,19 @@ class NmcliExtensions:
     """Extended functionalities for nmcli package"""
     
     @staticmethod
-    def connect_to_open_or_saved_wifi(device_control_instance, ssid: str) -> None:
-        """Connect to a known WiFi network without requiring password"""
-        cmd =  ['device', 'wifi', 'connect', ssid]
-                
+    def connect_to_open_or_saved_wifi(ssid: str) -> None:
+        """Join a saved or open network without sending a password.
+
+        A saved profile uses the public connection command. An open network
+        that has never been saved has no public call that omits the password,
+        so that one command is issued directly.
+        """
         try:
-            result = device_control_instance._syscmd.nmcli(cmd)
-            
-            failure_patterns = [
-                r'Connection activation failed:',
-                r'Error: Connection activation failed',
-                r'Error: No network with SSID',
-                r'Error: Failed to add/activate new connection'
-            ]
-            
-            for pattern in failure_patterns:
-                if re.search(pattern, result):
-                    raise nmcli._exception.ConnectionActivateFailedException(
-                        f'Connection activation failed for {ssid}'
-                    )
-            
-            print(f"Successfully connected to {ssid}")
-            
-        except nmcli._exception.ConnectionActivateFailedException:
-            raise
-        except Exception as e:
-            print(f"Failed to connect to {ssid}: {e}")
-            raise
-    
-    @staticmethod
-    def wifi_force_rescan(device_control_instance) -> bool:
-        """Force a WiFi rescan to refresh available networks"""
-        cmd = ['device', 'wifi', 'list', '--rescan', 'yes']
-        
-                
-        try:
-            device_control_instance._syscmd.nmcli(cmd)
-            print("WiFi rescan completed successfully")
-            return True
-        except Exception as e:
-            print(f"WiFi rescan failed: {e}")
-            raise
+            nmcli.connection.up(ssid)
+            return
+        except nmcli._exception.NotExistException:
+            pass
+        nmcli.device._syscmd.nmcli(["device", "wifi", "connect", ssid])
 
 class NetworkService:
     """Service class to handle network operations"""
@@ -92,19 +62,13 @@ class NetworkService:
         """Scan for available networks with optional force rescan"""
         networks = []
         try:
-            if force_rescan:
-                NmcliExtensions.wifi_force_rescan(nmcli.device)
-                time.sleep(0.5)  # Allow rescan to complete
-            
-            for wifi in nmcli.device.wifi():
+            visible = (
+                nmcli.device.wifi(rescan=True) if force_rescan else nmcli.device.wifi()
+            )
+            for wifi in visible:
                 if not wifi.ssid:
                     continue
-                
-                # Use the new NetworkInfo.from_wifi_device method
-                network = NetworkInfo.from_wifi_device(wifi)
-                networks.append(network)
-                
-            print(f"Found {len(networks)} networks")
+                networks.append(NetworkInfo.from_wifi_device(wifi))
             
         except Exception as e:
             print(f"Error scanning networks: {e}")
@@ -172,7 +136,7 @@ class NetworkService:
             if password:
                 nmcli.device.wifi_connect(ssid, password)
             else:
-                NmcliExtensions.connect_to_open_or_saved_wifi(nmcli.device, ssid)
+                NmcliExtensions.connect_to_open_or_saved_wifi(ssid)
             
             return True, "Connected successfully"
             

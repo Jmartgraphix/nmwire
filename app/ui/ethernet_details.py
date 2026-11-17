@@ -12,7 +12,7 @@ from gi.repository import Gtk, GLib, Pango
 
 def port_title(details: EthernetDetails) -> str:
     if not details.device:
-        return "Not Connected"
+        return "No wired ports"
     if details.name and details.name != details.device:
         return f"{details.name} ({details.device})"
     return details.device

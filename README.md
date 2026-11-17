@@ -43,7 +43,14 @@ PATH=".venv/bin:$PATH" ./nmwire
 
 ## Custom style
 
-If `~/.config/nmwire/style.css` exists, the app loads it instead of the built-in style. When that file is missing, it still loads `~/.config/nmgui/style.css`.
+`~/.config/nmwire/style.css` replaces the built-in style completely. `~/.config/nmgui/style.css` is used only when that file is absent. An old nmgui sheet has no rules for the Ethernet widgets, so those rows stay unstyled until the sheet includes them.
+
+IDs you can theme:
+
+- `#ethernet-label`, `#ethernet-name-label`, `#ethernet-port-title`, `#ethernet-scan-label`
+- `#wifi-label`, `#wifi-networks-label`, `#wifi-scan-label`, `#wifi-off-box`, `#wifi-off-label`
+- `#network-list-box`, `#network-ssid`, `#network-signal`, `#network-button`, `#connected-icon`
+- `#scanning-label`, `#no-networks-label`, `#error-label`
 
 ## Hyprland
 
