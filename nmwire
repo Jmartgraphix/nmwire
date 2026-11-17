@@ -1,0 +1,5 @@
+#!/bin/bash
+# Launch this checkout, even when nmwire is reached through a symlink.
+dir="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+export PYTHONPATH="$dir/app:$dir/vendor${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 "$dir/app/main.py" "$@"

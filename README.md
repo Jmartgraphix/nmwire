@@ -25,15 +25,15 @@ Python 3.10 or newer, plus:
 ```bash
 git clone https://github.com/Jmartgraphix/nmwire.git
 cd nmwire
-python3 app/main.py
+./nmwire
 ```
 
-A local virtualenv that can see the system GTK bindings works too:
+A local virtualenv that can see the system GTK bindings works too. The launcher uses whichever `python3` is on your `PATH`:
 
 ```bash
 python3 -m venv --system-site-packages .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python app/main.py
+PATH=".venv/bin:$PATH" ./nmwire
 ```
 
 ## Building a binary
