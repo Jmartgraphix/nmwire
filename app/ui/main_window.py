@@ -1,3 +1,4 @@
+import threading
 import gi
 
 from models import NetworkInfo, WiFiState
@@ -22,8 +23,10 @@ class NmwireWindow(Gtk.ApplicationWindow):
         
         self.current_state = WiFiState.OFF
         self.current_view = "list"  # "list" or "details"
+        self._wifi_syncing = False
+        self._wifi_generation = 0
         self._setup_ui()
-        self._update_wifi_state(initial_load=True)
+        self._load_wifi_state(initial_load=True)
 
         # keypress logic for handling ESC
         key_controller = Gtk.EventControllerKey.new()
@@ -55,6 +58,7 @@ class NmwireWindow(Gtk.ApplicationWindow):
     def _create_wifi_toggle(self) -> Gtk.Box:
         """Create the WiFi toggle section"""
         self.wifi_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        self.wifi_switch.set_sensitive(False)
         self.wifi_switch.connect("state-set", self._on_wifi_toggled)
         
         wifi_label = Gtk.Label(label="Wi-Fi", xalign=0, name="wifi-label")
@@ -67,30 +71,55 @@ class NmwireWindow(Gtk.ApplicationWindow):
         return toggle_box
     
     def _on_wifi_toggled(self, switch, state):
-        """Handle WiFi toggle"""
-        current_state = NetworkService.get_wifi_status()
-        
-        if current_state == state:
-            return
-        
-        if NetworkService.toggle_wifi(state):
-            self._update_wifi_state(scan_immediately=state)
-        else:
-            switch.set_active(current_state)
-    
-    def _update_wifi_state(self, scan_immediately=False, initial_load=False):
-        """Update the UI based on WiFi state"""
-        wifi_status = NetworkService.get_wifi_status()
+        """Start the radio change without waiting on NetworkManager."""
+        if self._wifi_syncing:
+            return True
+
+        self._wifi_generation += 1
+        generation = self._wifi_generation
+        self.wifi_switch.set_sensitive(False)
+
+        def toggle_thread():
+            success = NetworkService.toggle_wifi(state)
+            status = NetworkService.get_wifi_status() if success else not state
+            GLib.idle_add(self._apply_wifi_state, status, state and success, generation)
+
+        threading.Thread(target=toggle_thread, daemon=True).start()
+        # Keep the current position until NetworkManager reports the result.
+        return True
+
+    def _load_wifi_state(self, scan_immediately=False, initial_load=False):
+        """Read the radio off the window thread, then update the switch."""
+        self._wifi_generation += 1
+        generation = self._wifi_generation
+        scan = scan_immediately or initial_load
+
+        def load_thread():
+            status = NetworkService.get_wifi_status()
+            GLib.idle_add(self._apply_wifi_state, status, scan, generation)
+
+        threading.Thread(target=load_thread, daemon=True).start()
+
+    def _apply_wifi_state(self, wifi_status, scan_immediately=False, generation=None):
+        """Show the radio state. NetworkManager was already consulted."""
+        if generation is not None and generation != self._wifi_generation:
+            return False
+
+        self._wifi_syncing = True
+        self.wifi_switch.set_state(wifi_status)
         self.wifi_switch.set_active(wifi_status)
-        
+        self.wifi_switch.set_sensitive(True)
+        self._wifi_syncing = False
+
         if wifi_status:
             self.current_state = WiFiState.ON
             if self.current_view == "list":
-                self._show_network_list(scan_immediately or initial_load)
+                self._show_network_list(scan_immediately)
         else:
             self.current_state = WiFiState.OFF
             self.current_view = "list"
             self._show_wifi_off()
+        return False
     
     def _show_network_list(self, scan_immediately=False):
         """Show the network list widget"""
@@ -152,7 +181,6 @@ class NmwireWindow(Gtk.ApplicationWindow):
             success, message = NetworkService.connect_to_network(ssid, password)
             GLib.idle_add(lambda: self._connection_complete(ssid, success, message))
         
-        import threading
         thread = threading.Thread(target=connect_thread)
         thread.daemon = True
         thread.start()
