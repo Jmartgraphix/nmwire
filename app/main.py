@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import gi
 import argparse
+import signal
 import sys
 from network_service import NetworkService
 from ui.main_window import NmwireWindow
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk
+from gi.repository import GLib, GLibUnix, Gtk
 from ui.styles import StyleManager
 
 # Application version
@@ -59,6 +60,8 @@ if __name__ == "__main__":
         
         # If we get here, NetworkManager is available, so start the app
         app = NmwireApp()
+        # SIGTERM skips Python's interrupt handler, so quit through GLib.
+        GLibUnix.signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, lambda: app.quit() or GLib.SOURCE_REMOVE)
         app.run()
     except KeyboardInterrupt:
         print("Application stopped manually.")
