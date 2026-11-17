@@ -1,8 +1,46 @@
 import re
+import threading
 
-import nmcli
 from typing import Literal
+from nmcli._device import DeviceControl
+from nmcli._system import SystemCommand
 from nmcli.data.device import DeviceDetails
+
+
+class _EnglishCommand(SystemCommand):
+    """nmcli for Ethernet, always in English.
+
+    The process environment can set LANGUAGE, which gettext prefers over
+    LANG. Pinning that too keeps the carrier value "on" or "off".
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._call_lock = threading.Lock()
+        self.disable_use_sudo()
+        self.set_lang("C.UTF-8")
+
+    def nmcli(self, parameters):
+        with self._call_lock:
+            original = self._run
+
+            def run(commands, capture_output, check, env):
+                pinned = dict(env)
+                pinned["LANG"] = "C.UTF-8"
+                pinned["LC_ALL"] = "C.UTF-8"
+                pinned["LANGUAGE"] = "C"
+                return original(
+                    commands, capture_output=capture_output, check=check, env=pinned
+                )
+
+            self._run = run
+            try:
+                return super().nmcli(parameters)
+            finally:
+                self._run = original
+
+
+_device = DeviceControl(_EnglishCommand())
 
 EthernetLinkState = Literal[
     "connected",
@@ -28,7 +66,7 @@ def link_state(eth_dev: DeviceDetails) -> EthernetLinkState:
 
     NetworkManager uses separate states while a link is coming up or has
     failed, and reports an unplugged cable as no carrier rather than as
-    a normal disconnect.
+    a normal disconnect. The carrier word is read in English.
     """
     code = _leading_code(eth_dev.get("GENERAL.STATE"))
     reason = _leading_code(eth_dev.get("GENERAL.REASON"))
@@ -210,7 +248,7 @@ class EthernetService:
         """Return every wired device, not only the first one."""
         return [
             dev
-            for dev in nmcli.device.show_all()
+            for dev in _device.show_all()
             if dev.get("GENERAL.TYPE") == "ethernet"
         ]
 
@@ -248,9 +286,9 @@ class EthernetService:
                 return True
 
             if state:
-                nmcli.device.connect(device)
+                _device.connect(device)
             else:
-                nmcli.device.disconnect(device)
+                _device.disconnect(device)
             return True
         except Exception as e:
             print(f"Error toggling Ethernet: {e}")
