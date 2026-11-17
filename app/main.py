@@ -6,6 +6,7 @@ import sys
 from network_service import NetworkService
 from ui.main_window import NmwireWindow
 gi.require_version("Gtk", "4.0")
+gi.require_version("GLibUnix", "2.0")
 from gi.repository import GLib, GLibUnix, Gtk
 from ui.styles import StyleManager
 
