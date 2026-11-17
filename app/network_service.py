@@ -117,12 +117,10 @@ class NetworkService:
                     
                 return True, f"Successfully forgot network: '{ssid}'"
                 
-            except nmcli._exception.ConnectionDeleteException as e:
-                # Handle specific nmcli deletion errors
-                error_msg = str(e).strip()
-                if "no such connection" in error_msg.lower():
-                    return False, f"No saved network found with SSID: '{ssid}'"
-                return False, f"Failed to forget network '{ssid}': {error_msg}"
+            except nmcli._exception.NotExistException:
+                return False, f"No saved network found with SSID: '{ssid}'"
+            except nmcli._exception.ConnectionDeleteFailedException as e:
+                return False, f"Failed to forget network '{ssid}': {str(e).strip()}"
                 
         except Exception as e:
             error_msg = f"Unexpected error forgetting network '{ssid}': {str(e)}"
