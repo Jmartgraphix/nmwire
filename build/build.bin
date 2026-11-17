@@ -86,6 +86,9 @@ clean_dist() {
 build_application() {
     log_info "Starting Nuitka compilation..."
     
+    # The bundled nmcli package lives in vendor/, not in the app directory.
+    export PYTHONPATH="${SCRIPT_DIR}/../vendor${PYTHONPATH:+:$PYTHONPATH}"
+
     # Change to source directory
     cd "${SRC_DIR}"
     

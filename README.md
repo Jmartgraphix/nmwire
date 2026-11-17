@@ -19,8 +19,9 @@ nmwire is a fork of [nmgui](https://github.com/s-adi-dev/nmgui).
 Python 3.10 or newer, plus:
 
 - `python-gobject` and GTK 4
-- `python-nmcli`
 - NetworkManager
+
+The Python wrapper is included. `vendor/nmcli` is [ushiboy/nmcli](https://github.com/ushiboy/nmcli) 1.5.0, under the MIT license in `vendor/nmcli/LICENSE`.
 
 ```bash
 git clone https://github.com/Jmartgraphix/nmwire.git
@@ -38,7 +39,7 @@ PATH=".venv/bin:$PATH" ./nmwire
 
 ## Building a binary
 
-`build/build.bin` compiles `app/main.py` with Nuitka and writes `dist/nmwire`. Install that file as `nmwire` and copy `nmwire.desktop` into the applications directory if you want a menu entry.
+`build/build.bin` compiles `app/main.py` with Nuitka and writes `dist/nmwire`. Install the compiler tools with `pip install -r requirements-build.txt`. Install that file as `nmwire` and copy `nmwire.desktop` into the applications directory if you want a menu entry.
 
 ## Custom style
 
@@ -59,7 +60,7 @@ windowrulev2 = float, class:^(com\.jmartgraphix\.nmwire)$
 - [Keo Ponleou Sok](https://github.com/ponleou) — the first Ethernet support
 - Jason K Martin — this fork
 
-Network access goes through a fork of python-nmcli: [s-adi-dev/nmcli](https://github.com/s-adi-dev/nmcli).
+Network access goes through the bundled [ushiboy/nmcli](https://github.com/ushiboy/nmcli) 1.5.0.
 
 ## License
 
