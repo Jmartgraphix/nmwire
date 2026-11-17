@@ -1,4 +1,5 @@
 from typing import Callable, Optional
+import subprocess
 import threading
 import gi
 
@@ -215,17 +216,18 @@ class EthernetPortRow(Gtk.Box):
 
 
 class EthernetSection(Gtk.Box):
-    """Every wired port, refreshed in the background."""
-
-    POLL_INTERVAL_SECONDS = 1
+    """Every wired port, refreshed when NetworkManager reports a change."""
 
     def __init__(self):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=10)
 
         self.busy = False
         self._polling = False
+        self._pending_refresh = False
+        self._closed = False
         self._generation = 0
-        self._poll_id = 0
+        self._monitor_proc: subprocess.Popen | None = None
+        self._monitor_refresh_id = 0
         self._default_device = ""
         self._expansion_choice: dict[str, bool] = {}
         self.ports: list[EthernetPortRow] = []
@@ -245,11 +247,10 @@ class EthernetSection(Gtk.Box):
 
         self.append(header)
         self.append(self.ports_box)
-        details, failed, route_device = self._load_details()
-        if not failed:
-            self._default_device = route_device
-        self._rebuild(details or [EthernetDetails()])
-        self._poll_id = GLib.timeout_add_seconds(self.POLL_INTERVAL_SECONDS, self._poll)
+        self.connect("unrealize", self._on_unrealize)
+        # The first device listing waits on nmcli, so it stays off this thread.
+        self._start_fetch(manual=False)
+        self._start_monitor()
 
     def remember_expansion(self, device: str, expanded: bool):
         """Keep a row where someone put it across refreshes."""
@@ -268,11 +269,86 @@ class EthernetSection(Gtk.Box):
             return choice
         return details.device == self._default_device
 
+    def _on_unrealize(self, *_args):
+        self._stop_monitor()
+
     def do_unroot(self):
-        if self._poll_id:
-            GLib.source_remove(self._poll_id)
-            self._poll_id = 0
+        self._stop_monitor()
         Gtk.Box.do_unroot(self)
+
+    def _start_monitor(self):
+        """Watch NetworkManager and reload only when it reports a change."""
+        try:
+            self._monitor_proc = subprocess.Popen(
+                ["nmcli", "monitor"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+        except OSError as error:
+            print(f"Error starting nmcli monitor: {error}")
+            return
+        threading.Thread(target=self._read_monitor, daemon=True).start()
+
+    def _read_monitor(self):
+        proc = self._monitor_proc
+        if proc is None or proc.stdout is None:
+            return
+        try:
+            for line in proc.stdout:
+                if self._closed:
+                    break
+                if line.strip():
+                    GLib.idle_add(self._on_network_changed)
+        except Exception as error:
+            if not self._closed:
+                print(f"Error reading nmcli monitor: {error}")
+
+    def _on_network_changed(self):
+        """Coalesce a burst of monitor lines into one reload."""
+        if self._closed or self._monitor_refresh_id:
+            return False
+        self._monitor_refresh_id = GLib.timeout_add(250, self._refresh_after_change)
+        return False
+
+    def _refresh_after_change(self):
+        self._monitor_refresh_id = 0
+        if self._closed:
+            return False
+        if self.busy or self._polling:
+            self._pending_refresh = True
+            return False
+        self._polling = True
+        self._start_fetch(manual=False)
+        return False
+
+    def _run_pending_refresh(self):
+        if not self._pending_refresh or self.busy or self._polling or self._closed:
+            return
+        self._pending_refresh = False
+        self._polling = True
+        self._start_fetch(manual=False)
+
+    def _stop_monitor(self):
+        """Stop nmcli monitor so closing the window does not leave it running."""
+        self._closed = True
+        if self._monitor_refresh_id:
+            GLib.source_remove(self._monitor_refresh_id)
+            self._monitor_refresh_id = 0
+        proc = self._monitor_proc
+        self._monitor_proc = None
+        if proc is None or proc.poll() is not None:
+            return
+        proc.terminate()
+        try:
+            proc.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            try:
+                proc.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                pass
 
     def _load_details(self) -> tuple[list[EthernetDetails], bool, str]:
         try:
@@ -302,6 +378,8 @@ class EthernetSection(Gtk.Box):
 
         for port in self.ports:
             port.switch.set_sensitive(port.allows_toggle and not busy)
+        if not busy:
+            self._run_pending_refresh()
 
     def update(self):
         """Reload every wired port on a background thread."""
@@ -312,18 +390,11 @@ class EthernetSection(Gtk.Box):
         self._start_fetch(manual=True)
         return False
 
-    def _poll(self):
-        """Pick up link, address, DNS, and speed changes without Refresh."""
-        if self._poll_id == 0:
-            return False
-        if not self.busy and not self._polling:
-            self._polling = True
-            self._start_fetch(manual=False)
-        return True
-
     def _start_fetch(self, manual: bool):
         self._generation += 1
         generation = self._generation
+        if not manual:
+            self._polling = True
 
         def refresh_thread():
             details, failed, route_device = self._load_details()
@@ -343,13 +414,17 @@ class EthernetSection(Gtk.Box):
         failed: bool,
         route_device: str,
     ):
-        if generation != self._generation:
+        if self._closed or generation != self._generation:
             return False
 
         self._polling = False
         if failed or (self.busy and not manual):
+            if not self.ports:
+                self._rebuild([EthernetDetails()])
             if manual:
                 self.set_busy(False)
+            else:
+                self._run_pending_refresh()
             return False
 
         self._default_device = route_device
@@ -363,6 +438,8 @@ class EthernetSection(Gtk.Box):
 
         if manual:
             self.set_busy(False)
+        else:
+            self._run_pending_refresh()
         return False
 
     def _rebuild(self, details: list[EthernetDetails]):
