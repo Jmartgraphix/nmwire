@@ -5,7 +5,8 @@
 set -euo pipefail
 
 # Configuration
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
 readonly SRC_DIR="${SCRIPT_DIR}/../app"
 readonly DIST_DIR="${SCRIPT_DIR}/../dist"
 readonly MAIN_FILE="main.py"

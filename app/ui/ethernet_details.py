@@ -151,6 +151,10 @@ class EthernetPortRow(Gtk.Box):
         details: Optional[EthernetDetails],
         route_device: str,
     ):
+        # The toggle thread can finish after the window has closed.
+        if self.section._closed:
+            return False
+
         # A failed connect or disconnect puts the slider back. The status
         # text still shows whatever NetworkManager reported for this port.
         if not success or details is None:

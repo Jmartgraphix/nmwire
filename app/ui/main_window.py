@@ -211,7 +211,7 @@ class NmwireWindow(Gtk.ApplicationWindow):
             if keyval == Gdk.KEY_Escape:
                 # If we're on a details page, go back to the list instead of quitting
                 if getattr(self, "current_view", "list") == "details":
-                    # (False means: don't force an immediate rescan; adjust if you prefer)
+                    # True starts a scan after returning to the list.
                     self._show_network_list(True)
                     return True
 
