@@ -187,12 +187,9 @@ class NmwireWindow(Gtk.ApplicationWindow):
                     self._show_network_list(True)
                     return True
 
-                # Otherwise we're on the main page; quit the app
-                app = self.get_application()
-                if app is not None:
-                    app.quit()
-                else:
-                    self.close()
+                # Close the window so the Ethernet monitor stops with it.
+                # Quitting the application directly skips that teardown.
+                self.close()
                 return True
         except Exception as e:
             print(f"Error while closing app using Esc: {e}")
