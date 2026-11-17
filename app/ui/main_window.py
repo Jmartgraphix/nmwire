@@ -6,7 +6,8 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Gdk, GLib
 from typing import Optional
 
-from network_service import NetworkService 
+from network_service import NetworkService
+from ui.ethernet_details import EthernetSection
 from ui.network_details import NetworkDetailsWidget
 from ui.wifi_off import WiFiOffWidget
 from ui.dialogs import PasswordDialog
@@ -16,8 +17,8 @@ class NetworkManagerWindow(Gtk.ApplicationWindow):
     
     def __init__(self, app):
         super().__init__(application=app)
-        self.set_title("Network Manager")
-        self.set_default_size(450, 350)
+        self.set_title("nmwire")
+        self.set_default_size(520, 680)
         
         self.current_state = WiFiState.OFF
         self.current_view = "list"  # "list" or "details"
@@ -37,13 +38,22 @@ class NetworkManagerWindow(Gtk.ApplicationWindow):
         main_box.set_margin_start(20)
         main_box.set_margin_end(20)
         
+        self.ethernet_section = EthernetSection()
+        main_box.append(self.ethernet_section)
+        main_box.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+
+        main_box.append(Gtk.Box(hexpand=True))  # spacer
+
         main_box.append(self._create_wifi_toggle())
         main_box.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         
         self.content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, vexpand=True)
         main_box.append(self.content_box)
-        
-        self.set_child(main_box)
+
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_child(main_box)
+        self.set_child(scrolled)
     
     def _create_wifi_toggle(self) -> Gtk.Box:
         """Create the WiFi toggle section"""

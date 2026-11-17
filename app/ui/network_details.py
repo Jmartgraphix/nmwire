@@ -91,12 +91,7 @@ class NetworkDetailsWidget(Gtk.Box):
         
         # Create advanced detail rows
         self._create_advanced_rows()
-        
-        scrolled_window = Gtk.ScrolledWindow(vexpand=True)
-        scrolled_window.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scrolled_window.set_child(self.content_box)
-        
-        self.append(scrolled_window)
+        self.append(self.content_box)
     
     def _create_advanced_rows(self):
         """Create advanced information rows"""

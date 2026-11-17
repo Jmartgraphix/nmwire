@@ -1,89 +1,66 @@
-<h1 align="center">NM WIRE</h1>
+<h1 align="center">nmwire</h1>
 
-A simple, lightweight GTK4-based GUI for NetworkManager using `nmcli`.
+A small GTK4 panel for NetworkManager. It lists Wi-Fi and wired links and talks to NetworkManager through `nmcli`.
+
+nmwire is a fork of [nmgui](https://github.com/s-adi-dev/nmgui).
 
 ![Main Interface](assets/interface.png)
 
 ## Features
 
-- Clean and minimal GTK4 interface
+- GTK4 interface for Wi-Fi and Ethernet
 - Uses `nmcli` for backend operations
-- Fast and lightweight
-- Available as a prebuilt binary (no Python setup required)
+- One row per Wi-Fi name, with the signal of the link in use
+- Wired ports stay collapsed unless they carry the default route
+- Optional user style sheet
 
-## Installation
+## Running from source
 
-### Arch Linux
+Python 3.10 or newer, plus:
 
-Install the binary version from AUR:
-```bash
-yay -S nmgui-bin
-```
-
-### Other Distributions
-
-Download the latest binary from [Releases](https://github.com/s-adi-dev/nmgui/releases):
+- `python-gobject` and GTK 4
+- `python-nmcli`
+- NetworkManager
 
 ```bash
-# Download and install
-sudo curl -L https://github.com/s-adi-dev/nmgui/releases/download/v1.0.0/main.bin -o /usr/bin/nmgui
-sudo chmod +x /usr/bin/nmgui
-
-# Install desktop entry (optional)
-curl -sL https://raw.githubusercontent.com/s-adi-dev/nmgui/main/nmgui.desktop | sudo tee /usr/share/applications/nmgui.desktop > /dev/null
-```
-
-**Note:** Only requires NetworkManager to be installed on your system.
-
-## Building from Source
-
-If you prefer to build from source, ensure the ensure the following dependencies are installed:
-
-#### Dependencies
-
-* Python 3.10 or newer
-* `python-gobject`
-* `python-nmcli`
-* `gtk4`
-* `NetworkManager`
-
-Clone the repository and run:
-
-
-```bash
-git clone https://github.com/s-adi-dev/nmgui.git
-cd nmgui
-
-# Run the application
+git clone https://github.com/Jmartgraphix/nmwire.git
+cd nmwire
 python3 app/main.py
 ```
 
-## Usage
+A local virtualenv that can see the system GTK bindings works too:
 
-Launch from your application menu or terminal:
 ```bash
-nmgui
+python3 -m venv --system-site-packages .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python app/main.py
 ```
 
-### Hyprland Users
+## Building a binary
 
-Add this to your config for floating window:
+`build/build.bin` compiles `app/main.py` with Nuitka and writes `dist/nmwire`. Install that file as `nmwire` and copy `nmwire.desktop` into the applications directory if you want a menu entry.
+
+## Custom style
+
+If `~/.config/nmwire/style.css` exists, the app loads it instead of the built-in style. When that file is missing, it still loads `~/.config/nmgui/style.css`.
+
+## Hyprland
+
+The window title is `nmwire` and the application id is `com.jmartgraphix.nmwire`. A rule written for the old title `Network Manager` or the class `nmgui` will not match.
+
 ```ini
-windowrulev2 = float, title:^(.*Network Manager.*)$
+windowrulev2 = float, class:^(com\.jmartgraphix\.nmwire)$
 ```
 
-## Contributing
+## Credits
 
-This application is still under development and may contain bugs.
-If you encounter issues or errors, please open an issue or submit a pull request with a fix.
+- [Aditya Pratap Singh](https://github.com/s-adi-dev) — original nmgui
+- Aaron Dinesh — user style sheet loading
+- [Keo Ponleou Sok](https://github.com/ponleou) — the first Ethernet support
+- Jason K Martin — this fork
 
-For problems related to `python-nmcli`, note that this project uses a fork maintained here:
-[python-nmcli-fork](https://github.com/s-adi-dev/nmcli)
-
-Pull requests to this fork are welcome, and relevant changes will be forwarded to the original repository.
-
-Contributions of any kind (bug fixes, improvements, or new features) are appreciated. 
+Network access goes through a fork of python-nmcli: [s-adi-dev/nmcli](https://github.com/s-adi-dev/nmcli).
 
 ## License
 
-GNU General Public License v3.0 - see [LICENSE](./LICENSE) file for details.
+nmwire stays under the GNU General Public License v3.0. The original grant also allows any later version of that license. The full license text is in [LICENSE](./LICENSE).

@@ -15,7 +15,7 @@ class NetworkManagerApp(Gtk.Application):
     """Main application class"""
     
     def __init__(self):
-        super().__init__(application_id="com.network.manager")
+        super().__init__(application_id="com.jmartgraphix.nmwire")
     
     def do_activate(self):
         """Application activation"""
@@ -26,8 +26,8 @@ class NetworkManagerApp(Gtk.Application):
 def parse_arguments():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(
-        description="Network Manager - A GTK4 network management application",
-        prog="network-manager"
+        description="nmwire - A GTK4 NetworkManager panel",
+        prog="nmwire"
     )
     
     parser.add_argument(
