@@ -19,8 +19,9 @@ nmwire is a fork of [nmgui](https://github.com/s-adi-dev/nmgui).
 Python 3.10 or newer, plus:
 
 - `python-gobject` and GTK 4
-- GLib 2.80 or newer (`GLibUnix` stops `nmcli monitor` when the process is killed)
 - NetworkManager
+
+Stopping `nmcli monitor` when the process is killed uses `GLibUnix` when that API is present. Older GLib uses `GLib.unix_signal_add` instead.
 
 The Python wrapper is included. `vendor/nmcli` is [ushiboy/nmcli](https://github.com/ushiboy/nmcli) 1.5.0, under the MIT license in `vendor/nmcli/LICENSE`.
 
