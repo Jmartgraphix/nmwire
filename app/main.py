@@ -20,7 +20,7 @@ class NmwireApp(Gtk.Application):
     def do_activate(self):
         """Application activation"""
         StyleManager.apply_styles()
-        win = NmwireWindow(self)
+        win = self.props.active_window or NmwireWindow(self)
         win.present()
 
 def parse_arguments():
