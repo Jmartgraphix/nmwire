@@ -19,9 +19,19 @@ class NmwireApp(Gtk.Application):
     
     def do_activate(self):
         """Application activation"""
-        StyleManager.apply_styles()
-        win = self.props.active_window or NmwireWindow(self)
+        win = self.props.active_window
+        if win is None:
+            StyleManager.apply_styles()
+            win = NmwireWindow(self)
         win.present()
+
+    def do_shutdown(self):
+        """Stop Ethernet monitors when the process exits without closing."""
+        for window in self.get_windows():
+            section = getattr(window, "ethernet_section", None)
+            if section is not None:
+                section._stop_monitor()
+        Gtk.Application.do_shutdown(self)
 
 def parse_arguments():
     """Parse command line arguments"""
